@@ -69,6 +69,8 @@
     "npm-run-all2": "^6.2.2",
     "only-allow": "^1.2.1",
     "prettier": "^3.3.3",
+    "sucrase": "^3.35.1",
+    "tiny-glob": "^0.2.9",
     "typescript": "^5.6.3",
     "vitest": "2.1.2"
   }
