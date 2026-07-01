@@ -2,6 +2,8 @@ import 'dotenv/config'
 
 import fs from 'node:fs/promises'
 import path from 'node:path'
+import { createReadStream } from 'node:fs'
+import crypto from 'crypto'
 
 import { input } from '@inquirer/prompts'
 import delay from 'delay'
@@ -1041,6 +1043,30 @@ async function dragAndDrop(
     { steps: 20 }
   );
   await page.mouse.up();
+}
+
+function md5sum(path: string) {
+  // const md5 = await md5sum(path)
+  // https://stackoverflow.com/a/44643479/10440128
+  return new Promise((resolve, reject) => {
+    const hash = crypto.createHash('md5')
+    const stream = createReadStream(path)
+    stream.on('error', err => reject(err))
+    stream.on('data', chunk => hash.update(chunk))
+    stream.on('end', () => resolve(hash.digest('hex')))
+  })
+}
+
+function sha1sum(path: string) {
+  // const md5 = await md5sum(path)
+  // https://stackoverflow.com/a/44643479/10440128
+  return new Promise((resolve, reject) => {
+    const hash = crypto.createHash('sha1')
+    const stream = createReadStream(path)
+    stream.on('error', err => reject(err))
+    stream.on('data', chunk => hash.update(chunk))
+    stream.on('end', () => resolve(hash.digest('hex')))
+  })
 }
 
 await main()
