@@ -9,6 +9,8 @@ import { chromium, type Locator } from 'playwright'
 import which from 'which'
 import looksSame from 'looks-same'
 import fastGlob from 'fast-glob'
+import { bmvbhash } from 'blockhash-core'
+import PNG from 'png-js'
 
 import type { BookInfo, BookMeta, BookMetadata, PageChunk } from './types'
 import {
@@ -482,6 +484,65 @@ async function main() {
     await fs.writeFile(tocItemsCachePath, JSON.stringify(tocItems), { encoding: 'utf8' })
   }
 
+  async function getImageBytes(imageSelector: string) {
+    // no. this creates small and blurry images
+    // https://github.com/transitive-bullshit/kindle-ai-export/issues/13
+    // const b = await page
+    //   .locator(krRendererMainImageSelector)
+    //   .screenshot({ type: 'png', scale: 'css' })
+    // https://stackoverflow.com/a/62575556/10440128
+    // https://playwright.dev/docs/evaluating
+    async function evalFn({ imageSelector }) {
+      const canvas = document.createElement('canvas')
+      const context = canvas.getContext('2d')
+      const img = document.querySelector(imageSelector)
+      if (!img) return null
+      canvas.height = img.naturalHeight
+      canvas.width = img.naturalWidth
+      context.drawImage(img, 0, 0, img.naturalWidth, img.naturalHeight)
+      const dataUrl = canvas.toDataURL()
+      // remove "data:image/pngbase64,"
+      const base64String = dataUrl.slice(dataUrl.indexOf(",") + 1)
+      return base64String
+    }
+    let base64String
+    const retryNum = 100
+    for (let retryIdx = 0; retryIdx < retryNum; retryIdx++) {
+      base64String = await page.evaluate(evalFn, { imageSelector })
+      if (base64String) break
+      console.log(`getImageBytes: failed to get image bytes in try ${retryIdx}`)
+      await delay(1000)
+    }
+    if (!base64String) {
+      throw new Error(`getImageBytes: failed to get image bytes after ${retryNum} tries`)
+    }
+    const b = Buffer.from(base64String, 'base64')
+    return b
+  }
+
+  async function getImageHash(imageBytes: Buffer) {
+    // based on https://github.com/commonsmachinery/blockhash-js/blob/master/index.js
+    const png = new PNG(imageBytes)
+    const imgData = {
+        width: png.width,
+        height: png.height,
+        data: new Uint8Array(png.width * png.height * 4)
+    }
+    // png.copyToImageData(imgData, png.decodePixels())
+    // png.copyToImageData(imgData, png.decodePixels((pixels: Buffer) => pixels))
+    function getPixels(png: PNG) {
+      return new Promise<Buffer>((resolve, _reject) => {
+        png.decodePixels(resolve)
+      })
+    }
+    const pixels = await getPixels(png)
+    png.copyToImageData(imgData, pixels)
+    const bits = 16 // 64 hex chars
+    // const bits = 8 // 16 hex chars // too many collisions?
+    const hash = bmvbhash(imgData, bits)
+    return hash
+  }
+
   const tocItemsCachePath = `${outDir}/tocItems.json`
 
   await readTocItemsCache(tocItems, tocItemsCachePath)
@@ -614,7 +675,7 @@ async function main() {
       subPage += subPageBase
     }
 
-    function getScreenshotPath(page, subPage, imageId) {
+    function getScreenshotPath(page: Number, subPage: Number, imageHash: string) {
       return path.join(
         pageScreenshotsDir,
         pageColor,
@@ -622,7 +683,7 @@ async function main() {
           `${page}`.padStart(pagePadding, '0') +
           '-' +
           `${subPage}`.padStart(subPagePadding, '0') +
-          `-${imageId}` +
+          `-${imageHash}` +
           '.png'
         )
       )
@@ -641,16 +702,10 @@ async function main() {
       )
     }
 
-    let screenshotPath
-    while (true) {
-      screenshotPath = getScreenshotPath(pageNav.page, subPage, imageId)
-      if (!(await fileExists(screenshotPath))) {
-        break
-      }
-      // file exists -> change path
-      subPage++
+    function getImageHashOfPath(filePath: string): string | undefined {
+      // partial inverse of getScreenshotPath
+      return path.basename(filePath).split("-").pop()?.split(".")[0]
     }
-
 
     /*
     if (await fileExists(screenshotPath)) {
@@ -660,36 +715,40 @@ async function main() {
       // TODO indent ...
     */
 
-    // FIXME this hangs after some pages
-    console.log('getting screenshot image ...')
-    // no. this creates small and blurry images
+    // FIXME screenshot images are 4x smaller than the original images
     // https://github.com/transitive-bullshit/kindle-ai-export/issues/13
-    // const b = await page
-    //   .locator(krRendererMainImageSelector)
-    //   .screenshot({ type: 'png', scale: 'css' })
-    // https://stackoverflow.com/a/62575556/10440128
-    // https://playwright.dev/docs/evaluating
-    const base64String = await page.evaluate(async ({ krRendererMainImageSelector }) => {
-      const canvas = document.createElement('canvas')
-      const context = canvas.getContext('2d')
-      const img = document.querySelector(krRendererMainImageSelector)
-      canvas.height = img.naturalHeight
-      canvas.width = img.naturalWidth
-      context.drawImage(img, 0, 0, img.naturalWidth, img.naturalHeight)
-      const dataUrl = canvas.toDataURL()
-      // remove "data:image/pngbase64,"
-      const base64String = dataUrl.slice(dataUrl.indexOf(",") + 1)
-      return base64String
-    }, { krRendererMainImageSelector })
-    const b = Buffer.from(base64String, 'base64')
+
+    // FIXME this hangs after some pages
+
+    // FIXME retry on timeout: locator.screenshot: Timeout 29995.38599999994ms exceeded.
+
+    // NOTE this hangs when the chrome window is minimized
+    // but it works when the chrome window is in the background
+
+    console.log('getting screenshot image ...')
+    const b = await getImageBytes(krRendererMainImageSelector)
     console.log('getting screenshot image done')
+
+    const imageHash = await getImageHash(b)
+    console.log(`screenshot image hash ${imageHash}`)
+
+    let screenshotPath
+    while (true) {
+      screenshotPath = getScreenshotPath(pageNav.page, subPage, imageHash)
+      if (!(await fileExists(screenshotPath))) {
+        break
+      }
+      // file exists -> change path
+      subPage++
+    }
 
     // loop screenshot files of this page to find duplicate images
     let foundDuplicate = false
     const pathPattern = getScreenshotPathPattern(pageNav.page)
     for (const path of await fastGlob.glob(pathPattern)) {
-      const {equal} = await looksSame(b, path, {tolerance: 5})
-      if (!equal) continue
+      // TODO use imageHash
+      const imageHash2 = getImageHashOfPath(path)
+      if (imageHash != imageHash2) continue
       foundDuplicate = true
       // screenshotPath = `${path}.dup.${Date.now()}.png`
       screenshotPath = path
@@ -786,24 +845,47 @@ async function main() {
         break
       }
 
-      const newSrc = await page
-        .locator(krRendererMainImageSelector)
-        .getAttribute('src')
+      console.log('getting next screenshot image ...')
+      const b2 = await getImageBytes(krRendererMainImageSelector)
+      console.log('getting next screenshot image done')
 
-      console.log('clicked next page button...', { src, newSrc }) // debug
+      // const newSrc = await page
+      //   .locator(krRendererMainImageSelector)
+      //   .getAttribute('src')
 
-      const src2 = newSrc
-      const imageIdMatch2 = imageIdRegex.exec(src2)
-      if (!imageIdMatch2) {
-        console.log(`FIXME not found imageIdMatch2 in src2 ${src2}`)
-        await delay(99999)
+      // console.log('clicked next page button...', { src, newSrc }) // debug
+
+      // TODO fast path?
+      // this assumes that identical imageId always means identical image content
+      // so there are no collisions of imageId's
+      // this would be chaper than getting the imageHash
+      /*
+      if (imageId2 == imageId) {
+        // wait for change in newSrc
+        await delay(1000)
+        ++retries
+        continue
       }
-      const imageId2 = imageIdMatch2[1]
-      console.log(`found imageId2 ${imageId2}`)
+      */
+
+      // const src2 = newSrc
+      // const imageIdMatch2 = imageIdRegex.exec(src2)
+      // if (!imageIdMatch2) {
+      //   console.log(`FIXME not found imageIdMatch2 in src2 ${src2}`)
+      //   await delay(99999)
+      // }
+      // const imageId2 = imageIdMatch2[1]
+      // console.log(`found imageId2 ${imageId2}`)
+
+      const imageHash2 = await getImageHash(b2)
+      console.log(`next screenshot image hash ${imageHash2}`)
 
       // if (newSrc !== src) {
       // this assumes that all images are unique = there are no duplicate images
-      if (!(imageId2 in pageByImageId)) {
+      // no. identical images can have different id's (and different bytes)
+      // so we need to look for visual similarity
+      // if (!(imageId2 in pageByImageId)) {
+      if (imageHash2 != imageHash) {
         break
       }
 
