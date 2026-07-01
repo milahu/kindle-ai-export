@@ -169,6 +169,54 @@ Do not include any additional text, descriptions, or punctuation. Ignore any emb
         } catch (err) {
           console.error(`error processing image ${index} (${screenshot})`, err)
           await delay(2000)
+          // TODO better handle rate-limiting
+          /*
+          error processing image 336 (out/B0DTZ195XS/pages/0336-0273.png) APIError: 429 Rate limit reached for gpt-4o in organization org-8OWpxFfNzgl7PvLoUqjsbjiO on tokens per min (TPM): Limit 30000, Used 29446, Requested 821. Please try again in 534ms. Visit https://platform.openai.com/account/rate-limits to learn more.
+              at <anonymous> (/home/user/src/kindle-ai-export/node_modules/.pnpm/openai-fetch@3.3.1/node_modules/openai-fetch/src/fetch-api.ts:43:14)
+              at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+              at async function_ (/home/user/src/kindle-ai-export/node_modules/.pnpm/ky@1.7.2/node_modules/ky/source/core/Ky.ts:60:14)
+              at async Promise.result.<computed> (/home/user/src/kindle-ai-export/node_modules/.pnpm/ky@1.7.2/node_modules/ky/source/core/Ky.ts:91:27)
+              at async OpenAIClient.createChatCompletion (/home/user/src/kindle-ai-export/node_modules/.pnpm/openai-fetch@3.3.1/node_modules/openai-fetch/src/openai-client.ts:80:45)
+              at async pMap.concurrency (/home/user/src/kindle-ai-export/src/transcribe-book-content.ts:105:25)
+              at async file:///home/user/src/kindle-ai-export/node_modules/.pnpm/p-map@7.0.2/node_modules/p-map/index.js:109:20 {
+            status: 429,
+            headers: {
+              'alt-svc': 'h3=":443"; ma=86400',
+              'cf-cache-status': 'DYNAMIC',
+              'cf-ray': '95fb86278f70e0d3-MUC',
+              connection: 'keep-alive',
+              'content-length': '370',
+              'content-type': 'application/json; charset=utf-8',
+              date: 'Tue, 15 Jul 2025 19:04:11 GMT',
+              'retry-after': '1',
+              'retry-after-ms': '534',
+              server: 'cloudflare',
+              'set-cookie': '_cfuvid=lgDwIZnrS6Bw.gWEC3bmqUOSnlMQUkhm7am6L1sI.wM-1752606251579-0.0.1.1-604800000; path=/; domain=.api.openai.com; HttpOnly; Secure; SameSite=None',
+              'strict-transport-security': 'max-age=31536000; includeSubDomains; preload',
+              vary: 'Origin',
+              'x-content-type-options': 'nosniff',
+              'x-ratelimit-limit-input-images': '50000',
+              'x-ratelimit-limit-requests': '500',
+              'x-ratelimit-limit-tokens': '30000',
+              'x-ratelimit-remaining-input-images': '49999',
+              'x-ratelimit-remaining-requests': '499',
+              'x-ratelimit-remaining-tokens': '554',
+              'x-ratelimit-reset-input-images': '1ms',
+              'x-ratelimit-reset-requests': '120ms',
+              'x-ratelimit-reset-tokens': '58.891s',
+              'x-request-id': 'req_03d95f8229b36d6e24199ae6e9848073'
+            },
+            error: {
+              message: 'Rate limit reached for gpt-4o in organization org-8OWpxFfNzgl7PvLoUqjsbjiO on tokens per min (TPM): Limit 30000, Used 29446, Requested 821. Please try again in 534ms. Visit https://platform.openai.com/account/rate-limits to learn more.',
+              type: 'tokens',
+              param: null,
+              code: 'rate_limit_exceeded'
+            },
+            code: 'rate_limit_exceeded',
+            param: null,
+            type: 'tokens'
+          }
+          */
         }
       },
       { concurrency: 8 }
