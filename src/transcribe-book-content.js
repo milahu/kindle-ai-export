@@ -8,7 +8,7 @@ import { OpenAIClient } from 'openai-fetch'
 import pMap from 'p-map'
 import delay from 'delay'
 
-import type { ContentChunk } from './types'
+
 import { assert, getEnv } from './utils'
 
 async function main() {
@@ -67,7 +67,7 @@ async function main() {
     await fs.writeFile(transcribeResultCachePath, JSON.stringify(tocItems), { encoding: 'utf8' })
   }
 
-  const content: ContentChunk[] = (
+  const content = (
     await pMap(
       pageScreenshots,
       async (screenshot) => {
@@ -78,8 +78,8 @@ async function main() {
           metadataMatch?.[1] && metadataMatch?.[2],
           `invalid screenshot filename: ${screenshot}`
         )
-        const index = Number.parseInt(metadataMatch[1]!, 10)
-        const page = Number.parseInt(metadataMatch[2]!, 10)
+        const index = Number.parseInt(metadataMatch[1], 10)
+        const page = Number.parseInt(metadataMatch[2], 10)
         assert(
           !Number.isNaN(index) && !Number.isNaN(page),
           `invalid screenshot filename: ${screenshot}`
@@ -121,12 +121,12 @@ Do not include any additional text, descriptions, or punctuation. Ignore any emb
                         url: screenshotBase64
                       }
                     }
-                  ] as any
+                  ] 
                 }
               ]
             })
 
-            const rawText = res.choices[0]?.message.content!
+            const rawText = res.choices[0]?.message.content
             const text = rawText
               .replace(/^\s*\d+\s*$\n+/m, '')
               // .replaceAll(/\n+/g, '\n')
@@ -153,7 +153,7 @@ Do not include any additional text, descriptions, or punctuation. Ignore any emb
               continue
             }
 
-            const result: ContentChunk = {
+            const result = {
               index,
               page,
               text,

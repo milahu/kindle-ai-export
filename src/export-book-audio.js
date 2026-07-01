@@ -6,11 +6,11 @@ import path from 'node:path'
 import ffmpeg from 'fluent-ffmpeg'
 import ky from 'ky'
 import ID3 from 'node-id3'
-import { OpenAIClient, type SpeechParams } from 'openai-fetch'
+import { OpenAIClient, } from 'openai-fetch'
 import pMap from 'p-map'
 import { UnrealSpeechClient } from 'unrealspeech-api'
 
-import type { BookMetadata, ContentChunk } from './types'
+
 import {
   assert,
   ffmpegOnProgress,
@@ -19,7 +19,7 @@ import {
   hashObject
 } from './utils'
 
-type TTSEngine = 'openai' | 'unrealspeech'
+
 
 async function main() {
   const asin = getEnv('ASIN')
@@ -38,7 +38,7 @@ async function main() {
   const content = (
     JSON.parse(
       await fs.readFile(path.join(outDir, 'content.json'), 'utf8')
-    ) as ContentChunk[]
+    ) 
   )
     .filter((c) => !isPreview || c.page === 1)
     .concat(
@@ -56,29 +56,29 @@ async function main() {
 
   const metadata = JSON.parse(
     await fs.readFile(path.join(outDir, 'metadata.json'), 'utf8')
-  ) as BookMetadata
+  ) 
   assert(content.length, 'no book content found')
   assert(metadata.meta, 'invalid book metadata: missing meta')
   assert(metadata.toc?.length, 'invalid book metadata: missing toc')
 
   // TTS engine configuration
-  const ttsEngine = (getEnv('TTS_ENGINE') as TTSEngine) ?? 'openai'
+  const ttsEngine = (getEnv('TTS_ENGINE') ) ?? 'openai'
   assert(
     ttsEngine === 'openai' || ttsEngine === 'unrealspeech',
     `Invalid TTS engine "${ttsEngine}"`
   )
-  const openaiEngineParams: Omit<SpeechParams, 'input'> = {
+  const openaiEngineParams = {
     model: 'tts-1-hd',
-    voice: (getEnv('OPENAI_TTS_VOICE') as any) ?? 'alloy',
+    voice: (getEnv('OPENAI_TTS_VOICE') ) ?? 'alloy',
     response_format: 'mp3'
   }
-  const unrealSpeechEngineParams: Omit<
-    Parameters<UnrealSpeechClient['speech']>[0],
-    'text'
-  > = {
+  const unrealSpeechEngineParams
+
+
+ = {
     voiceId: getEnv('UNREAL_SPEECH_VOICE') ?? 'Scarlett'
   }
-  const ttsEngineParams: any =
+  const ttsEngineParams =
     ttsEngine === 'openai' ? openaiEngineParams : unrealSpeechEngineParams
   const ttsEngineVoice =
     ttsEngine === 'openai'
@@ -105,10 +105,10 @@ async function main() {
   const ttsOutDir = path.join(audioOutDir, configDir)
   await fs.mkdir(ttsOutDir, { recursive: true })
 
-  const batches: Array<{
-    title?: string
-    text: string
-  }> = []
+  const batches
+
+
+ = []
 
   batches.push({
     title,
@@ -119,14 +119,14 @@ By ${authors.join(', ')}`
 
   // let lastTocItemIndex = 0
   for (let i = 0, index = 0; i < metadata.toc.length - 1; i++) {
-    const tocItem = metadata.toc[i]!
+    const tocItem = metadata.toc[i]
     if (tocItem.page === undefined) continue
 
-    const nextTocItem = metadata.toc[i + 1]!
+    const nextTocItem = metadata.toc[i + 1]
     let nextIndex = nextTocItem.page
       ? content.findIndex(
           (c, j) =>
-            c.page >= nextTocItem.page! ||
+            c.page >= nextTocItem.page ||
             (isPreview && j === content.length - 1)
         )
       : content.length
@@ -151,7 +151,7 @@ ${text}`.split('\n\n')
     // Combine successive paragraphs if they can fit with a single audio batch.
     let j = 0
     do {
-      const chunk = t[j]!
+      const chunk = t[j]
 
       if (chunk.length > maxCharactersPerAudioBatch) {
         throw new Error(
@@ -160,7 +160,7 @@ ${text}`.split('\n\n')
       }
 
       if (j < t.length - 1) {
-        const nextChunk = t[j + 1]!
+        const nextChunk = t[j + 1]
 
         const combined = `${chunk}\n\n${nextChunk}`
         if (combined.length <= maxCharactersPerAudioBatch) {
@@ -176,7 +176,7 @@ ${text}`.split('\n\n')
     for (const [k, element] of t.entries()) {
       batches.push({
         title: k === 0 ? tocItem.title : undefined,
-        text: element!
+        text: element
       })
     }
 
@@ -205,15 +205,15 @@ ${text}`.split('\n\n')
       }
 
       console.log(`Generating audio batch ${index + 1}: ${audioFilePath}`)
-      let audio: ArrayBuffer
+      let audio
 
       if (ttsEngine === 'openai') {
-        audio = await openai!.createSpeech({
+        audio = await openai.createSpeech({
           ...ttsEngineParams,
           input: batch.text
         })
       } else {
-        const res = await unrealSpeech!.speech({
+        const res = await unrealSpeech.speech({
           ...ttsEngineParams,
           text: batch.text
         })
@@ -235,7 +235,7 @@ ${text}`.split('\n\n')
 
       const duration =
         probeData.format.duration ??
-        (probeData.streams[0]?.duration as unknown as number)
+        (probeData.streams[0]?.duration )
       assert(
         duration !== undefined && !Number.isNaN(duration),
         `Failed to determine audio duration for file: ${audioChunk.audioFilePath}`
@@ -264,7 +264,7 @@ ${text}`.split('\n\n')
   )
 
   // Use ffmpeg to concatenate the audio files into a single audiobook file.
-  await new Promise<void>((resolve, reject) => {
+  await new Promise((resolve, reject) => {
     ffmpeg(audioConcatInputFilePath)
       .inputOptions(['-f', 'concat'])
       .withOptions([
@@ -304,7 +304,7 @@ ${text}`.split('\n\n')
 
   try {
     // Add ID3 metadata to the MP3 audiobook file.
-    await new Promise<void>((resolve, reject) => {
+    await new Promise((resolve, reject) => {
       const res = ID3.update(
         {
           title: isPreview ? `Preview of ${title}` : title,
@@ -369,7 +369,7 @@ ${text}`.split('\n\n')
         resolve()
       }
     })
-  } catch (err: any) {
+  } catch (err) {
     console.warn(
       `(warning) Failed to add extra ID3 metadata to audiobook: ${err.message}\n`
     )
@@ -378,8 +378,8 @@ ${text}`.split('\n\n')
   console.log(`\nGenerated audiobook: ${audiobookOutputFilePath}`)
 }
 
-async function ffmpegProbe(filePath: string) {
-  return new Promise<ffmpeg.FfprobeData>((resolve, reject) => {
+async function ffmpegProbe(filePath) {
+  return new Promise((resolve, reject) => {
     ffmpeg.ffprobe(filePath, (err, data) => {
       if (err) return reject(err)
       resolve(data)

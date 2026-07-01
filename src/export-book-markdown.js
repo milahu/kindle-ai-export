@@ -3,7 +3,7 @@ import 'dotenv/config'
 import fs from 'node:fs/promises'
 import path from 'node:path'
 
-import type { BookMetadata, ContentChunk } from './types'
+
 import { assert, getEnv } from './utils'
 
 async function main() {
@@ -14,10 +14,10 @@ async function main() {
 
   const content = JSON.parse(
     await fs.readFile(path.join(outDir, 'content.json'), 'utf8')
-  ) as ContentChunk[]
+  ) 
   const metadata = JSON.parse(
     await fs.readFile(path.join(outDir, 'metadata.json'), 'utf8')
-  ) as BookMetadata
+  ) 
   assert(content.length, 'no book content found')
   assert(metadata.meta, 'invalid book metadata: missing meta')
   assert(metadata.toc?.length, 'invalid book metadata: missing toc')
@@ -27,12 +27,12 @@ async function main() {
 
   let lastTocItemIndex = 0
   for (let i = 0, index = 0; i < metadata.toc.length - 1; i++) {
-    const tocItem = metadata.toc[i]!
+    const tocItem = metadata.toc[i]
     if (tocItem.page === undefined) continue
 
-    const nextTocItem = metadata.toc[i + 1]!
+    const nextTocItem = metadata.toc[i + 1]
     const nextIndex = nextTocItem.page
-      ? content.findIndex((c) => c.page >= nextTocItem.page!)
+      ? content.findIndex((c) => c.page >= nextTocItem.page)
       : content.length
     if (nextIndex < index) continue
 
@@ -60,12 +60,12 @@ ${metadata.toc
 ---`
 
   for (let i = 0, index = 0; i < metadata.toc.length - 1; i++) {
-    const tocItem = metadata.toc[i]!
+    const tocItem = metadata.toc[i]
     if (tocItem.page === undefined) continue
 
-    const nextTocItem = metadata.toc[i + 1]!
+    const nextTocItem = metadata.toc[i + 1]
     const nextIndex = nextTocItem.page
-      ? content.findIndex((c) => c.page >= nextTocItem.page!)
+      ? content.findIndex((c) => c.page >= nextTocItem.page)
       : content.length
     if (nextIndex < index) continue
 

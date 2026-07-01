@@ -6,7 +6,7 @@ import path from 'node:path'
 
 import PDFDocument from 'pdfkit'
 
-import type { BookMetadata, ContentChunk } from './types'
+
 import { assert, getEnv } from './utils'
 
 async function main() {
@@ -17,10 +17,10 @@ async function main() {
 
   const content = JSON.parse(
     await fsp.readFile(path.join(outDir, 'content.json'), 'utf8')
-  ) as ContentChunk[]
+  ) 
   const metadata = JSON.parse(
     await fsp.readFile(path.join(outDir, 'metadata.json'), 'utf8')
-  ) as BookMetadata
+  ) 
   assert(content.length, 'no book content found')
   assert(metadata.meta, 'invalid book metadata: missing meta')
   assert(metadata.toc?.length, 'invalid book metadata: missing toc')
@@ -42,7 +42,7 @@ async function main() {
   const fontSize = 12
 
   const renderTitlePage = () => {
-    ;(doc as any).outline.addItem('Title Page')
+    ;(doc ).outline.addItem('Title Page')
     doc.fontSize(48)
     doc.y = doc.page.height / 2 - doc.heightOfString(title) / 2
     doc.text(title, { align: 'center' })
@@ -67,12 +67,12 @@ async function main() {
   let index = 0
 
   for (let i = 0; i < metadata.toc.length - 1; i++) {
-    const tocItem = metadata.toc[i]!
+    const tocItem = metadata.toc[i]
     if (tocItem.page === undefined) continue
 
-    const nextTocItem = metadata.toc[i + 1]!
+    const nextTocItem = metadata.toc[i + 1]
     const nextIndex = nextTocItem.page
-      ? content.findIndex((c) => c.page >= nextTocItem.page!)
+      ? content.findIndex((c) => c.page >= nextTocItem.page)
       : content.length
     if (nextIndex < index) continue
 
@@ -84,7 +84,7 @@ async function main() {
     const chunks = content.slice(index, nextIndex)
     const text = chunks.map((chunk) => chunk.text).join(' ')
 
-    ;(doc as any).outline.addItem(tocItem.title)
+    ;(doc ).outline.addItem(tocItem.title)
     doc.fontSize(20)
     doc.text(tocItem.title, { align: 'center', lineGap: 16 })
 

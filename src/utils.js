@@ -12,23 +12,23 @@ export {
 
 const numerals = { I: 1, V: 5, X: 10, L: 50, C: 100, D: 500, M: 1000 }
 
-export function deromanize(romanNumeral: string): number {
+export function deromanize(romanNumeral) {
   const roman = romanNumeral.toUpperCase().split('')
   let num = 0
   let val = 0
 
   while (roman.length) {
-    val = numerals[roman.shift()! as keyof typeof numerals]
-    num += val * (val < numerals[roman[0] as keyof typeof numerals] ? -1 : 1)
+    val = numerals[roman.shift() ]
+    num += val * (val < numerals[roman[0] ] ? -1 : 1)
   }
 
   return num
 }
 
 export async function fileExists(
-  filePath: string,
-  mode: number = fs.constants.F_OK | fs.constants.R_OK
-): Promise<boolean> {
+  filePath,
+  mode = fs.constants.F_OK | fs.constants.R_OK
+) {
   try {
     await fs.access(filePath, mode)
     return true
@@ -37,27 +37,27 @@ export async function fileExists(
   }
 }
 
-export function hashObject(obj: Record<string, any>): string {
+export function hashObject(obj) {
   return hashObjectImpl(obj, {
     algorithm: 'sha1',
     encoding: 'hex'
   })
 }
 
-export type FfmpegProgressEvent = {
-  frames: number
-  currentFps: number
-  currentKbps: number
-  targetSize: number
-  timemark: string
-  percent?: number | undefined
-}
+ 
+
+
+
+
+
+
+
 
 export function ffmpegOnProgress(
-  onProgress: (progress: number, event: FfmpegProgressEvent) => void,
-  durationMs: number
+  onProgress,
+  durationMs
 ) {
-  return (event: FfmpegProgressEvent) => {
+  return (event) => {
     let progress = 0
 
     try {

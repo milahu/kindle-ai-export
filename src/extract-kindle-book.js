@@ -7,14 +7,14 @@ import crypto from 'crypto'
 
 import { input } from '@inquirer/prompts'
 import delay from 'delay'
-import { chromium, type Locator } from 'playwright'
+import { chromium, } from 'playwright'
 import which from 'which'
-import looksSame from 'looks-same'
+
 import fastGlob from 'fast-glob'
 import { bmvbhash } from 'blockhash-core'
 import PNG from 'png-js'
 
-import type { BookInfo, BookMeta, BookMetadata, PageChunk } from './types'
+
 import {
   assert,
   deromanize,
@@ -23,16 +23,16 @@ import {
   parseJsonpResponse
 } from './utils'
 
-interface PageNav {
-  page?: number
-  location?: number
-  total: number
-}
 
-interface TocItem extends PageNav {
-  title: string
-  locator?: Locator
-}
+
+
+
+
+
+
+
+
+
 
 async function main() {
   const asin = getEnv('ASIN')
@@ -107,8 +107,8 @@ async function main() {
   })
   const page = await context.newPage()
 
-  let info: BookInfo | undefined
-  let meta: BookMeta | undefined
+  let info
+  let meta
 
   function fixDoubleUTF8(str) {
     return str
@@ -202,7 +202,7 @@ async function main() {
         url.pathname === '/service/mobile/reader/startReading' &&
         url.searchParams.get('asin')?.toLowerCase() === asin.toLowerCase()
       ) {
-        const body: any = await response.json()
+        const body = await response.json()
         delete body.karamelToken
         delete body.metadataUrl
         delete body.YJFormatVersion
@@ -220,7 +220,7 @@ async function main() {
         // body = Buffer.from(body, 'ascii').toString('utf-8') // no
         body = fixDoubleUTF8(body)
         // body = utf8Decode(body)
-        const metadata = parseJsonpResponse<any>(body)
+        const metadata = parseJsonpResponse(body)
         if (metadata.asin !== asin) return
         delete metadata.cpr
         if (Array.isArray(metadata.authorsList)) {
@@ -397,7 +397,7 @@ async function main() {
     await delay(1000)
   }
 
-  async function goToPage(pageNumber: number) {
+  async function goToPage(pageNumber) {
     await delay(1000)
     await page.locator('#reader-header').hover({ force: true })
     await delay(200)
@@ -480,7 +480,7 @@ async function main() {
   await delay(1000)
 
   const $tocItems = await page.locator('ion-list ion-item').all()
-  const tocItems: Array<TocItem> = []
+  const tocItems = []
 
   async function fileExists(path) {
     // alternative to fs.exists
@@ -528,7 +528,7 @@ async function main() {
     await fs.writeFile(tocItemsCachePath, JSON.stringify(tocItems), { encoding: 'utf8' })
   }
 
-  async function getImageBytes(imageSelector: string) {
+  async function getImageBytes(imageSelector) {
     // no. this creates small and blurry images
     // https://github.com/transitive-bullshit/kindle-ai-export/issues/13
     // const b = await page
@@ -564,7 +564,7 @@ async function main() {
     return b
   }
 
-  async function getImageHash(imageBytes: Buffer) {
+  async function getImageHash(imageBytes) {
     // based on https://github.com/commonsmachinery/blockhash-js/blob/master/index.js
     const png = new PNG(imageBytes)
     const imgData = {
@@ -574,8 +574,8 @@ async function main() {
     }
     // png.copyToImageData(imgData, png.decodePixels())
     // png.copyToImageData(imgData, png.decodePixels((pixels: Buffer) => pixels))
-    function getPixels(png: PNG) {
-      return new Promise<Buffer>((resolve, _reject) => {
+    function getPixels(png) {
+      return new Promise((resolve, _reject) => {
         png.decodePixels(resolve)
       })
     }
@@ -628,16 +628,16 @@ async function main() {
   }
 
   const parsedToc = parseTocItems(tocItems)
-  const toc: TocItem[] = tocItems.map(({ locator: _, ...tocItem }) => tocItem)
+  const toc = tocItems.map(({ locator: _, ...tocItem }) => tocItem)
 
   const total = parsedToc.firstPageTocItem.total
   const pagePadding = `${total * 2}`.length
-  await page.locator(parsedToc.firstPageTocItem.locator._selector)!.scrollIntoViewIfNeeded()
-  await page.locator(parsedToc.firstPageTocItem.locator._selector)!.click()
+  await page.locator(parsedToc.firstPageTocItem.locator._selector).scrollIntoViewIfNeeded()
+  await page.locator(parsedToc.firstPageTocItem.locator._selector).click()
 
   const totalContentPages = Math.min(
     parsedToc.afterLastPageTocItem?.page
-      ? parsedToc.afterLastPageTocItem!.page
+      ? parsedToc.afterLastPageTocItem.page
       : total,
     total
   )
@@ -656,9 +656,9 @@ async function main() {
     await fs.mkdir(path.join(pageScreenshotsDir, pageColor), { recursive: true })
     // TODO indent ...
 
-  const pages: Array<PageChunk> = []
+  const pages = []
   console.warn(
-    `reading ${totalContentPages} pages${total > totalContentPages ? ` (of ${total} total pages stopping at "${parsedToc.afterLastPageTocItem!.title}")` : ''}...`
+    `reading ${totalContentPages} pages${total > totalContentPages ? ` (of ${total} total pages stopping at "${parsedToc.afterLastPageTocItem.title}")` : ''}...`
   )
 
   pagesByPageColor[pageColor] = pages
@@ -740,7 +740,7 @@ async function main() {
       subPage += subPageBase
     }
 
-    function getScreenshotPath(page: Number, subPage: Number, imageHash: string) {
+    function getScreenshotPath(page, subPage, imageHash) {
       return path.join(
         pageScreenshotsDir,
         pageColor,
@@ -767,7 +767,7 @@ async function main() {
       )
     }
 
-    function getImageHashOfPath(filePath: string): string | undefined {
+    function getImageHashOfPath(filePath) {
       // partial inverse of getScreenshotPath
       return path.basename(filePath).split("-").pop()?.split(".")[0]
     }
@@ -919,7 +919,7 @@ async function main() {
           }
         }
         // await delay(500)
-      } catch (err: any) {
+      } catch (err) {
         // No next page to navigate to
         console.warn(
           'unable to navigate to next page; breaking...',
@@ -990,7 +990,7 @@ async function main() {
 
   const pages = pagesByPageColor['white']
 
-  const result: BookMetadata = { info: info!, meta: meta!, toc, pages, pagesByPageColor }
+  const result = { info: info, meta: meta, toc, pages, pagesByPageColor }
   console.log(`writing ${path.join(outDir, 'metadata.json')}`)
   await fs.writeFile(
     path.join(outDir, 'metadata.json'),
@@ -1022,13 +1022,13 @@ async function main() {
   console.log(`  npx tsx src/export-book-audio.ts`)
 }
 
-function parsePageNav(text: string | null): PageNav | undefined {
+function parsePageNav(text) {
   {
     // Parse normal page locations
     const match = text?.match(/page\s+(\d+)\s+of\s+(\d+)/i)
     if (match) {
-      const page = Number.parseInt(match?.[1]!)
-      const total = Number.parseInt(match?.[2]!)
+      const page = Number.parseInt(match?.[1])
+      const total = Number.parseInt(match?.[2])
       if (Number.isNaN(page) || Number.isNaN(total)) {
         return undefined
       }
@@ -1042,8 +1042,8 @@ function parsePageNav(text: string | null): PageNav | undefined {
     // (toc, copyright, title, etc)
     const match = text?.match(/location\s+(\d+)\s+of\s+(\d+)/i)
     if (match) {
-      const location = Number.parseInt(match?.[1]!)
-      const total = Number.parseInt(match?.[2]!)
+      const location = Number.parseInt(match?.[1])
+      const total = Number.parseInt(match?.[2])
       if (Number.isNaN(location) || Number.isNaN(total)) {
         return undefined
       }
@@ -1056,8 +1056,8 @@ function parsePageNav(text: string | null): PageNav | undefined {
     // Parse locations which use roman numerals
     const match = text?.match(/page\s+([cdilmvx]+)\s+of\s+(\d+)/i)
     if (match) {
-      const location = deromanize(match?.[1]!)
-      const total = Number.parseInt(match?.[2]!)
+      const location = deromanize(match?.[1])
+      const total = Number.parseInt(match?.[2])
       if (Number.isNaN(location) || Number.isNaN(total)) {
         return undefined
       }
@@ -1067,7 +1067,7 @@ function parsePageNav(text: string | null): PageNav | undefined {
   }
 }
 
-function parseTocItems(tocItems: TocItem[]) {
+function parseTocItems(tocItems) {
   // Find the first page in the TOC which contains the main book content
   // (after the title, table of contents, copyright, etc)
   const firstPageTocItem = tocItems.find((item) => item.page !== undefined)
@@ -1107,9 +1107,9 @@ function parseTocItems(tocItems: TocItem[]) {
 
 // https://stackoverflow.com/a/78208183/10440128
 async function dragAndDrop(
-  page: Page,
-  originSelector: string,
-  destinationSelector: string
+  page,
+  originSelector,
+  destinationSelector
 ) {
   const originElement = await page.waitForSelector(originSelector);
   const destinationElement = await page.waitForSelector(destinationSelector);
@@ -1133,7 +1133,7 @@ async function dragAndDrop(
   await page.mouse.up();
 }
 
-function md5sum(path: string) {
+function md5sum(path) {
   // const md5 = await md5sum(path)
   // https://stackoverflow.com/a/44643479/10440128
   return new Promise((resolve, reject) => {
@@ -1145,7 +1145,7 @@ function md5sum(path: string) {
   })
 }
 
-function sha1sum(path: string) {
+function sha1sum(path) {
   // const md5 = await md5sum(path)
   // https://stackoverflow.com/a/44643479/10440128
   return new Promise((resolve, reject) => {

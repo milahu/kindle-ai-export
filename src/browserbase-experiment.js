@@ -29,7 +29,7 @@ async function createSession() {
     })
   })
 
-  return res.json() as Promise<{ id: string }>
+  return res.json() 
 }
 
 async function main() {
@@ -45,8 +45,8 @@ async function main() {
   )
 
   // Getting the default context to ensure the sessions are recorded.
-  const defaultContext = browser.contexts()[0]!
-  const page = defaultContext.pages()[0]!
+  const defaultContext = browser.contexts()[0]
+  const page = defaultContext.pages()[0]
 
   page.on('console', (msg) => {
     const message = msg.text()
