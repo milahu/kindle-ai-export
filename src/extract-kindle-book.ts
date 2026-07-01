@@ -51,6 +51,8 @@ async function main() {
   const krRendererMainImageSelector = '#kr-renderer .kg-full-page-img img'
   const bookReaderUrl = `https://read.amazon.com/?asin=${asin}`
 
+  console.dir({ outDir, userDataDir, });
+
   async function getChromeExecutablePath() {
     // find chrome executable path
     // examples:
@@ -88,6 +90,8 @@ async function main() {
     executablePath: executablePath,
     args: ['--hide-crash-restore-bubble'],
     ignoreDefaultArgs: ['--enable-automation'],
+    // TODO why 2? why not 1?
+    // deviceScaleFactor: 1,
     deviceScaleFactor: 2,
     viewport: { width: 1280, height: 720 },
     // https://playwright.dev/docs/api/class-browsertype#browser-type-launch-persistent-context-option-record-har
@@ -152,7 +156,42 @@ async function main() {
     return string.join('');
   }
 
+  // page.on('request', async (request) => {
+  //   console.log('request', request)
+  // })
+
   page.on('response', async (response) => {
+    // console.log('response', response)
+    /*
+    _request: <ref *3> Request {
+      _initializer: {
+        frame: [EventEmitter],
+        url: 'blob:https://read.amazon.com/70e1e440-e3ec-463f-b802-5d9a556e8640',
+        resourceType: 'image',
+        method: 'GET',
+        headers: [Array],
+        isNavigationRequest: false
+      },
+    */
+    /*
+    _initializer: {
+      request: EventEmitter {
+        _events: [Object: null prototype] {},
+        _eventsCount: 0,
+        _maxListeners: undefined,
+        _pendingHandlers: Map(0) {},
+        _rejectionHandler: undefined,
+        on: [Function: addListener],
+        off: [Function: removeListener],
+        _object: [Request]
+      },
+      url: 'blob:https://read.amazon.com/64f5aff5-9a23-4b19-9278-8f2c45c576d3',
+      status: 200,
+      statusText: 'OK',
+      headers: [ [Object], [Object] ],
+    */
+
+    // console.log(`page.on response: url = ${response.url()}`)
     try {
       const status = response.status()
       if (status !== 200) return
@@ -194,6 +233,7 @@ async function main() {
           JSON.stringify(metadata, null, 2)
         )
       }
+      // else if (response.url() == "...") {}
     } catch {}
   })
 
@@ -254,6 +294,7 @@ async function main() {
       pageUrl.searchParams.get('asin') != null
     ) {
       // if a book was loaded before, kindle continues at the previous session
+      // see also: initial page
     }
     // TODO better check for 2FA page
     // try to locate input elements
@@ -385,6 +426,7 @@ async function main() {
       .locator('ion-footer ion-title')
       .first()
       .textContent()
+    console.log(`getPageNav: footerText = ${JSON.stringify(footerText)}`)
     return parsePageNav(footerText)
   }
 
@@ -609,6 +651,7 @@ async function main() {
   for (const pageColor of ['white', 'black']) {
     console.log(`extracting screenshots of ${pageColor} pages ...`)
     await updateSettings({ pageColor: pageColor })
+    console.log(`seeking to page 1`)
     await goToPage(1)
     await fs.mkdir(path.join(pageScreenshotsDir, pageColor), { recursive: true })
     // TODO indent ...
@@ -632,14 +675,31 @@ async function main() {
 
   let subPage = subPageBase
 
+  // TODO keep track of seen src hashes
+  // are they stable across repeated runs? (with same pageColor)
+  // src: 'blob:https://read.amazon.com/1a89093f-9899-40f6-99b0-1f1f72edb970',
+  // src: 'blob:https://read.amazon.com/cf77da47-b2fe-49dc-9394-d54793d27605',
+  // src: 'blob:https://read.amazon.com/2da63612-fe43-434e-9917-5d571a0d1b8d',
+  // src: 'blob:https://read.amazon.com/1ba867cd-7e3b-4ff0-8f04-c3b8b056c823',
+  // src: 'blob:https://read.amazon.com/546b0e38-69fc-4002-8990-52d9bed5a977',
+  // src: 'blob:https://read.amazon.com/f6eac398-cb5b-48b2-95b8-1527aa916ce3',
+
+  // NOTE imageId is not stable across repeated runs
   const imageIdRegex = /^blob:https:\/\/read.amazon.com\/([0-9a-f-]{36})$/
+
   const pageByImageId = {}
 
+  // loop pages
   while (true) {
+    // FIXME pageNav.page is not stable across repeated runs
     const pageNav = await getPageNav()
+
     if (pageNav?.page === undefined) {
       break
     }
+
+    const pageNum = pageNav.page
+
     if (pageNav.page >= totalContentPages) {
       console.log('reached last page')
       break
@@ -647,6 +707,9 @@ async function main() {
 
     const index = pages.length
 
+    // FIXME this can hang
+    // locator.getAttribute: Timeout 30000ms exceeded.
+    // blame "deviceScaleFactor: 1"?
     console.log('getting image source of krRendererMainImageSelector ...')
     const src = await page
       .locator(krRendererMainImageSelector)
@@ -782,7 +845,7 @@ async function main() {
       screenshot: screenshotPath
     })
 
-    console.warn(pages.at(-1))
+    console.warn(`done page ${pageNum} subpage ${subPage}`, pages.at(-1))
 
       // ... TODO indent
     } // if (!foundDuplicate)
@@ -803,6 +866,9 @@ async function main() {
       try {
         // Navigate to the next page
         // await delay(100)
+        // wait 10*100 = 1000ms for change in newSrc
+        // then retry click on next page button
+        // FIXME this can skip pages
         if (retries % 10 === 0) {
           if (retries > 0) {
             console.warn('retrying...', {
@@ -810,16 +876,22 @@ async function main() {
               retries,
               ...pages.at(-1)
             })
+            // TODO click the next page button multiple times
+            // until we get a new image
+            /*
             console.log(`FIXME dont retry click on next page button`)
             // make sure we are on this page before clicking the next page button
             // otherwise clicking the next page button can skip pages
-            console.log(`before clicking next page button, seeking to page ${page}`)
+            console.log(`before clicking next page button, seeking to page ${pageNum}`)
             await goToPage(pageNum)
             // await delay(99999999)
+            */
           }
 
           // Click the next page button
-          console.log('clicking next page button')
+          // console.log('clicking next page button') // TODO restore
+          console.log('clicking next page button', { src, retries, ...pages.at(-1) }) // debug
+
           try {
             // TODO indent ...
           await page
@@ -833,8 +905,17 @@ async function main() {
             // this seems to be a bug in the kindle reader
             // when seeking from the last page to the first page
             // then there is no "next page" button, only a "previous page" button
-            console.log(`seeking to next page with goToPage(${pageNav.page + 1})`)
-            await goToPage(pageNav.page + 1)
+            // when the chrome window is minimized, we get this exc:
+            // TimeoutError: locator.click: Timeout 1000ms exceeded.
+            // FIXME this can skip subpages
+            // console.log(`seeking to next page with goToPage(${pageNav.page + 1})`)
+            // await goToPage(pageNav.page + 1)
+            console.log(`seeking to this page with goToPage(${pageNav.page})`)
+            await goToPage(pageNav.page)
+            throw exc
+            // retry
+            await delay(500)
+            continue
           }
         }
         // await delay(500)
@@ -895,7 +976,8 @@ async function main() {
         break
       }
 
-      await delay(100)
+      // wait for change in newSrc
+      await delay(1000)
 
       ++retries
     }
@@ -918,13 +1000,19 @@ async function main() {
   // console.log(JSON.stringify(result, null, 2))
 
   if (initialPageNav?.page !== undefined) {
-    console.warn(`resetting back to initial page ${initialPageNav.page}...`)
+    console.warn(`resetting back to initial page ${initialPageNav.page} ...`)
     // Reset back to the initial page
     await goToPage(initialPageNav.page)
+    console.warn(`resetting back to initial page ${initialPageNav.page} done`)
   }
 
+  console.log('page.close ...')
   await page.close()
+  console.log('page.close done')
+
+  console.log('context.close ...')
   await context.close()
+  console.log('context.close done')
 
   console.log(`hint: next steps:`)
   console.log(`  npx tsx src/transcribe-book-content.ts`)
