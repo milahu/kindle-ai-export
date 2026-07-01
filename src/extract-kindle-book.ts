@@ -88,7 +88,7 @@ async function main() {
     viewport: { width: 1280, height: 720 },
     // https://playwright.dev/docs/api/class-browsertype#browser-type-launch-persistent-context-option-record-har
     recordHar: {
-      path: path.join(outDir, 'requests.har'),
+      path: path.join(outDir, 'har', 'har.json'),
       mode: 'full',
       // no. this throws "RangeError: Invalid string length" in context.close
       // https://github.com/microsoft/playwright/issues/36707
