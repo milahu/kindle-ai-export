@@ -10,6 +10,7 @@
 import os
 import re
 import sys
+import json
 import subprocess
 from pathlib import Path
 from typing import List, Tuple, Dict, Any
@@ -96,6 +97,8 @@ async def main():
     asin = os.getenv("ASIN")
     if not asin:
         raise ValueError("ASIN environment variable not set")
+
+    matches_output_path = f"out/{asin}/align-pages.matches.json"
 
     white_dir = Path(f"out/{asin}/pages/white")
     black_dir = Path(f"out/{asin}/pages/black")
@@ -330,6 +333,8 @@ async def main():
         if found_match:
             print(f"found match: white_idx {white_idx} black_idx {black_idx}")
             matches.append((white_idx, black_idx))
+
+        if 0 and found_match:
             print("last 10 matches:")
             lwi = -1; lbi = -1 # last indices
             for match in matches[-10:]:
@@ -354,6 +359,10 @@ async def main():
 
     print('done. to remove tempfiles:')
     print(f"  rm out/{asin}/pages/*/*.{{inv,mon,diff,crop}}.png")
+
+    print("writing", matches_output_path)
+    with open(matches_output_path, "w") as f:
+        f.write(json.dumps(matches, indent=2) + "\n")
 
 if __name__ == "__main__":
     import asyncio
