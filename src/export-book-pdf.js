@@ -7,7 +7,7 @@ import path from 'node:path'
 import PDFDocument from 'pdfkit'
 
 
-import { assert, getEnv } from './utils'
+import { assert, getEnv } from './utils.js'
 
 async function main() {
   const asin = getEnv('ASIN')

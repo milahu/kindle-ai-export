@@ -4,7 +4,7 @@ import fs from 'node:fs/promises'
 import path from 'node:path'
 
 
-import { assert, getEnv } from './utils'
+import { assert, getEnv } from './utils.js'
 
 async function main() {
   const asin = getEnv('ASIN')

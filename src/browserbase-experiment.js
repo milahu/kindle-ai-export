@@ -5,7 +5,7 @@ import fs from 'node:fs/promises'
 import { input } from '@inquirer/prompts'
 import { chromium } from 'playwright-core'
 
-import { assert, getEnv } from './utils'
+import { assert, getEnv } from './utils.js'
 
 // TODO: kindle pages don't seem to render properly in headless playwright,
 // possibly due to webgl usage in the text renderer?

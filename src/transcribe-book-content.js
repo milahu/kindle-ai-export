@@ -9,7 +9,7 @@ import pMap from 'p-map'
 import delay from 'delay'
 
 
-import { assert, getEnv } from './utils'
+import { assert, getEnv } from './utils.js'
 
 async function main() {
   const asin = getEnv('ASIN')

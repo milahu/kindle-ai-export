@@ -27,7 +27,7 @@ import {
   getEnv,
 
 
-} from './utils'
+} from './utils.js'
 
 const asin = getEnv('ASIN')
 

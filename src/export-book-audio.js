@@ -17,7 +17,7 @@ import {
   fileExists,
   getEnv,
   hashObject
-} from './utils'
+} from './utils.js'
 
 
 

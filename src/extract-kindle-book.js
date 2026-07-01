@@ -21,7 +21,7 @@ import {
   getEnv,
   normalizeAuthors,
   parseJsonpResponse
-} from './utils'
+} from './utils.js'
 
 
 
@@ -1015,11 +1015,11 @@ async function main() {
   console.log('context.close done')
 
   console.log(`hint: next steps:`)
-  console.log(`  npx tsx src/transcribe-book-content.ts`)
-  console.log(`  npx tsx src/export-book-pdf.ts`)
+  console.log(`  node src/transcribe-book-content.js`)
+  console.log(`  node src/export-book-pdf.js`)
   console.log(`  ebook-convert out/${asin}/book.pdf out/${asin}/book.epub --enable-heuristics`)
-  console.log(`  npx tsx src/export-book-markdown.ts`)
-  console.log(`  npx tsx src/export-book-audio.ts`)
+  console.log(`  node src/export-book-markdown.js`)
+  console.log(`  node src/export-book-audio.js`)
 }
 
 function parsePageNav(text) {
